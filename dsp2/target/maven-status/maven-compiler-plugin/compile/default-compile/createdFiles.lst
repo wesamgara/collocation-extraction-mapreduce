@@ -1,0 +1,8 @@
+com\collocation\step2_join\Mapper1Gram.class
+com\collocation\step3_sort\SortReducer.class
+com\collocation\step3_sort\SortMapper.class
+com\collocation\App.class
+com\collocation\step1_count_n\Step1Mapper.class
+com\collocation\step2_join\Mapper2Gram.class
+com\collocation\step1_count_n\Step1Reducer.class
+com\collocation\step2_join\JoinReducer.class
