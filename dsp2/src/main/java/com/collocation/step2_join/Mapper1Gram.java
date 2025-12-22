@@ -14,8 +14,14 @@ import org.apache.hadoop.mapreduce.Mapper;
  */
 public class Mapper1Gram extends Mapper<LongWritable, Text, Text, Text> {
 
-    private Text outKey = new Text();
-    private Text outValue = new Text();
+    private Text outKey;
+    private Text outValue;
+
+    @Override
+    public void setup(Context context){
+        outKey = new Text();
+        outValue = new Text();
+    }
 
     @Override
     public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {

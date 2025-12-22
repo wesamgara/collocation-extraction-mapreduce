@@ -1,4 +1,4 @@
-package com.collocation.step3_sort;
+package com.collocation.step3_calc;
 
 import java.io.IOException;
 import org.apache.hadoop.io.LongWritable;

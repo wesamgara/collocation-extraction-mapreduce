@@ -6,15 +6,21 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 public class Step1Mapper extends Mapper<LongWritable, Text, Text, LongWritable> {
-    private Text decadeKey = new Text();
-    private LongWritable countValue = new LongWritable();
+    private Text decadeKey;
+    private LongWritable countValue;
+
+    @Override
+    public void setup(Context context){
+        decadeKey = new Text();
+        countValue = new LongWritable();
+    }
 
     @Override
     public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         // Line format: word <tab> year <tab> occurrences <tab> volumes
         String[] parts = value.toString().split("\t");
         
-        if (parts.length < 3) return; // Skip bad lines
+        if (parts.length < 3) return; // Skip bad lines 
 
         try {
             int year = Integer.parseInt(parts[1]);

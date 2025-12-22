@@ -16,8 +16,14 @@ import org.apache.hadoop.mapreduce.Reducer;
  */
 public class JoinReducer extends Reducer<Text, Text, Text, Text> {
 
-    private Text outKey = new Text();
-    private Text outValue = new Text();
+    private Text outKey;
+    private Text outValue;
+
+    @Override
+    public void setup(Context context){
+        outKey = new Text();
+        outValue = new Text();
+    }
 
     @Override
     public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
