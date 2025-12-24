@@ -6,8 +6,14 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 public class SortReducer extends Reducer<CollocationKey, Text, Text, Text> {
 
-    private int currentDecade = -1;
-    private int counter = 0;
+    private int currentDecade;
+    private int counter;
+
+    @Override
+    public void setup(Context context) {
+        currentDecade = -1;
+        counter = 0;
+    }
 
     @Override
     public void reduce(CollocationKey key, Iterable<Text> values, Context context) throws IOException, InterruptedException {

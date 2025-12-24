@@ -1,0 +1,8 @@
+fast car	1990	80	8
+red car	1990	10	1
+blue car	1990	10	1
+apple pie	1990	900	90
+fast car	2000	5	1
+red car	2000	120	12
+blue car	2000	10	1
+apple pie	2000	900	90

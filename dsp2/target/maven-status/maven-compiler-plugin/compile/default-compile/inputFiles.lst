@@ -1,8 +1,16 @@
-C:\Users\luai6\Documents\BGU\Coding courses\DSP\DSP2\dsp2\src\main\java\com\collocation\App.java
-C:\Users\luai6\Documents\BGU\Coding courses\DSP\DSP2\dsp2\src\main\java\com\collocation\step1_count_n\Step1Mapper.java
-C:\Users\luai6\Documents\BGU\Coding courses\DSP\DSP2\dsp2\src\main\java\com\collocation\step1_count_n\Step1Reducer.java
-C:\Users\luai6\Documents\BGU\Coding courses\DSP\DSP2\dsp2\src\main\java\com\collocation\step2_join\JoinReducer.java
-C:\Users\luai6\Documents\BGU\Coding courses\DSP\DSP2\dsp2\src\main\java\com\collocation\step2_join\Mapper1Gram.java
-C:\Users\luai6\Documents\BGU\Coding courses\DSP\DSP2\dsp2\src\main\java\com\collocation\step2_join\Mapper2Gram.java
-C:\Users\luai6\Documents\BGU\Coding courses\DSP\DSP2\dsp2\src\main\java\com\collocation\step3_sort\SortMapper.java
-C:\Users\luai6\Documents\BGU\Coding courses\DSP\DSP2\dsp2\src\main\java\com\collocation\step3_sort\SortReducer.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\DecadePartitioner.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\DecadeWordKey.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\GroupingComparator.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\Main.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step1_count_n\Step1Mapper.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step1_count_n\Step1Reducer.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step2_join\JoinReducer.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step2_join\Mapper1Gram.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step2_join\Mapper2Gram.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step3_calc\Step3MapperCount.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step3_calc\Step3MapperData.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step3_calc\Step3Reducer.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step4_sort\CollocationKey.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step4_sort\SortMapper.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step4_sort\SortReducer.java
+C:\Users\naser\Desktop\study\DSP\DSP2\dsp2\src\main\java\com\collocation\step4_sort\Step4Partitioner.java

@@ -1,24 +1,16 @@
-package com.collocation.step2_join;
+package com.collocation.step3_calc;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
-
 import com.collocation.DecadeWordKey;
 
-/**
- * Step 2 Mapper (1-Gram Input)
- * Goal: Read single word counts and emit them with a tag.
- * Input: Sequence File (Word, Year, Count, ...)
- * Output Key: "Decade Word" (Text)
- * Output Value: "1-GRAM_COUNT" (Text) - We tag it so Reducer knows it's c1
- */
-public class Mapper1Gram extends Mapper<LongWritable, Text, DecadeWordKey, Text> {
-
+public class Step3MapperCount extends Mapper<LongWritable, Text, DecadeWordKey, Text> {
+    
+    // Copy the same Stop Words setup here as Step 2
     private Set<String> stopWords;
 
     @Override
@@ -88,31 +80,27 @@ public class Mapper1Gram extends Mapper<LongWritable, Text, DecadeWordKey, Text>
     public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         String line = value.toString();
         String[] parts = line.split("\t");
-
         if (parts.length < 3) return;
 
-        String word = parts[0];
-        String yearStr = parts[1];
+        String word = parts[0]; // This is our potential "Word2"
         String countStr = parts[2];
 
-        if (stopWords.contains(word.toLowerCase())) {
-            return;
-        }
+        // Filter stop words just to be safe (though usually 2-grams are already filtered)
+        if (stopWords.contains(word.toLowerCase())) return; 
 
         try {
-            int year = Integer.parseInt(yearStr);
+            int year = Integer.parseInt(parts[1]);
             int decade = (year / 10) * 10;
 
-            // Key: "1990 Apple"
-            // We join Decade and Word so counts are grouped by decade
+            // KEY: Group by Decade + Word. 
+            // Tag = 0 (Count, arrives 1st)
+            DecadeWordKey outKey = new DecadeWordKey(String.valueOf(decade), word, 0);
             
-            DecadeWordKey outKey = new DecadeWordKey(String.valueOf(decade), word, 0); 
+            // VALUE: "c1:500" (This is C2, the count of the second word)
             Text outValue = new Text("c1:" + countStr);
 
             context.write(outKey, outValue);
 
-        } catch (NumberFormatException e) {
-            // Ignore bad lines
-        }
+        } catch (NumberFormatException e) { }
     }
 }

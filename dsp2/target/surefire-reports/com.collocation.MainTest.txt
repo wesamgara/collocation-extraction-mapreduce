@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
-Test set: com.collocation.AppTest
+Test set: com.collocation.MainTest
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.145 s -- in com.collocation.AppTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.045 s -- in com.collocation.MainTest

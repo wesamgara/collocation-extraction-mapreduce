@@ -10,7 +10,7 @@
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <hadoop.version>2.6.0</hadoop.version>
+    <hadoop.version>3.3.4</hadoop.version>
   </properties>
 
   <dependencies>
@@ -18,30 +18,21 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-core</artifactId>
         <version>${hadoop.version}</version>
-        <exclusions>
-            <exclusion>
-                <groupId>jdk.tools</groupId>
-                <artifactId>jdk.tools</artifactId>
-            </exclusion>
-        </exclusions>
+        <scope>provided</scope>
     </dependency>
 
     <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-common</artifactId>
         <version>${hadoop.version}</version>
-        <exclusions>
-            <exclusion>
-                <groupId>jdk.tools</groupId>
-                <artifactId>jdk.tools</artifactId>
-            </exclusion>
-        </exclusions>
+        <scope>provided</scope>
     </dependency>
 
     <dependency>
         <groupId>com.amazonaws</groupId>
         <artifactId>aws-java-sdk</artifactId>
-        <version>1.11.1000</version>
+        <version>1.12.500</version>
+        <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -65,9 +56,19 @@
                         <goal>shade</goal>
                     </goals>
                     <configuration>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <excludes>
+                                    <exclude>META-INF/*.SF</exclude>
+                                    <exclude>META-INF/*.DSA</exclude>
+                                    <exclude>META-INF/*.RSA</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
                         <transformers>
                             <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                <mainClass>com.collocation.App</mainClass>
+                                <mainClass>com.collocation.Main</mainClass>
                             </transformer>
                         </transformers>
                     </configuration>

@@ -6,12 +6,16 @@ import java.io.IOException;
 import org.apache.hadoop.io.WritableComparable;
 
 public class CollocationKey implements WritableComparable<CollocationKey> {
+    
+    // Primitives are excellent choice! Much faster than Text/DoubleWritable.
     private int decade;
     private double score;
 
     public CollocationKey() {
+        // We can just leave fields as default (0 and 0.0)
     }
 
+    // 2. Convenience Constructor for your Mapper
     public CollocationKey(int decade, double score) {
         this.decade = decade;
         this.score = score;
@@ -39,14 +43,14 @@ public class CollocationKey implements WritableComparable<CollocationKey> {
 
     @Override
     public int compareTo(CollocationKey other) {
-        // 1. Sort by Decade (Ascending)
+        // 1. Sort by Decade (Ascending) -> 1990 before 2000
         int decadeComparison = Integer.compare(this.decade, other.decade);
         if (decadeComparison != 0) {
             return decadeComparison;
         }
 
-        // 2. Sort by Score (DESCENDING)
-        // We compare other.score to this.score to get the highest numbers first
+        // 2. Sort by Score (DESCENDING) -> 500.0 before 5.0
+        // We swap 'other' and 'this' to reverse the sort
         return Double.compare(other.score, this.score);
     }
 
@@ -55,9 +59,9 @@ public class CollocationKey implements WritableComparable<CollocationKey> {
         return decade + "\t" + score;
     }
     
-    // hashCode is useful for default partitioning logic
     @Override
     public int hashCode() {
+        // This ensures all keys from "1990" go to the same Reducer
         return Integer.hashCode(decade);
     }
 }

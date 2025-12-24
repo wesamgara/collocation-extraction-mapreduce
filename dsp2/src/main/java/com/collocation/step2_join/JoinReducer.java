@@ -1,81 +1,71 @@
 package com.collocation.step2_join;
 
 import java.io.IOException;
-import java.util.ArrayList;
+
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
+
+import com.collocation.DecadeWordKey;
 
 /**
  * Step 2 Reducer: Joins c1 (Unigram count) with c12 (Bigram count).
  * Input Key: "Decade Word1" (e.g. "1990 Apple")
  * Input Values: 
- * - "1:500"       (Tag 1 means it's the unigram count for Apple)
- * - "2:Pie:20"    (Tag 2 means it's a bigram starting with Apple, plus the count)
- * * Output: "Decade Word2" -> "Word1 c1 c12"
- * (We flip the key to Word2 so the next step can join the count for Word2!)
+ * - "c1:500"       (Tag 0: The unigram count for Apple)
+ * - "c2:Pie:20"    (Tag 1: The bigram "Apple Pie" and its count)
  */
-public class JoinReducer extends Reducer<Text, Text, Text, Text> {
-
-    private Text outKey;
-    private Text outValue;
+public class JoinReducer extends Reducer<DecadeWordKey, Text, Text, Text> {
 
     @Override
-    public void setup(Context context){
-        outKey = new Text();
-        outValue = new Text();
-    }
-
-    @Override
-    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+    public void reduce(DecadeWordKey key, Iterable<Text> values, Context context) 
+            throws IOException, InterruptedException {
         
-        long c1 = -1; // Count of Word1
-        ArrayList<String> bigrams = new ArrayList<>(); // Store bigrams until we find c1
+        long countW1 = -1;
+        boolean first = true;
 
-        String decadeAndW1 = key.toString(); 
-        // key format: "1990 Apple"
-        String[] keyParts = decadeAndW1.split(" ");
-        if (keyParts.length < 2) return;
-        
-        String decade = keyParts[0];
-        String w1 = keyParts[1];
+        for (Text value : values) {
+            String val = value.toString();
 
-        // 1. Loop through all values to separate c1 from the bigrams
-        for (Text val : values) {
-            String s = val.toString();
-            
-            if (s.startsWith("1:")) {
-                // This is our c1 count! Format: "1:500"
-                try {
-                    c1 = Long.parseLong(s.split(":")[1]);
-                } catch (Exception e) {
-                    // ignore error
+            if (first) {
+                // --- FIRST ITEM (Expected Tag 0: c1) ---
+                // We assume Secondary Sort put "c1:..." first.
+                if (val.startsWith("c1:")) {
+                    String[] parts = val.split(":");
+                    
+                    // --- SAFETY FIX: CHECK LENGTH BEFORE ACCESSING INDEX 1 ---
+                    if (parts.length >= 2) {
+                        try {
+                            countW1 = Long.parseLong(parts[1]);
+                        } catch (NumberFormatException e) {
+                            // If number is corrupt, we keep countW1 = -1
+                        }
+                    }
                 }
-            } else if (s.startsWith("2:")) {
-                // This is a bigram entry! Format: "2:Pie:20"
-                // We save it in a list because we might not have found c1 yet
-                bigrams.add(s);
-            }
-        }
-
-        // 2. If we found c1, we can join it with every bigram
-        if (c1 != -1 && !bigrams.isEmpty()) {
-            for (String bigramEntry : bigrams) {
-                // Entry format: "2:Pie:20"
-                String[] parts = bigramEntry.split(":");
-                String w2 = parts[1];
-                String c12 = parts[2];
-
-                // Logic: We have w1, c1, and c12.
-                // We are missing c2 (count of w2). 
-                // To get c2, we send this data to a new reducer where "w2" is the key.
+                // Mark first as done so we process the rest as c2
+                first = false;
+            } 
+            else {
+                // --- REMAINING ITEMS (Expected Tag 1: c2) ---
                 
-                // New Key: "1990 Pie"
-                outKey.set(decade + " " + w2);
+                // If we failed to find a valid c1 count in the first step, 
+                // we cannot calculate LLR for any of these bigrams. Skip them.
+                if (countW1 == -1) return;
 
-                // New Value: "Apple 500 20" (w1 c1 c12)
-                outValue.set(w1 + " " + c1 + " " + c12);
-
-                context.write(outKey, outValue);
+                if (val.startsWith("c2:")) {
+                    String[] parts = val.split(":");
+                    
+                    // Safety Check: Ensure we have "c2", "Word2", and "CountPair"
+                    if (parts.length >= 3) {
+                        String word2 = parts[1];
+                        String countPair = parts[2];
+                        
+                        // Output: Decade -> Word1 Word2 CountPair CountW1
+                        // We write the key as the Decade, and the value contains the rest.
+                        // (The next Mapper will likely re-key this to Word2 to join c2).
+                        context.write(new Text(key.getDecade()), 
+                            new Text(key.getWord() + "\t" + word2 + "\t" + countPair + "\t" + countW1));
+                    }
+                }
             }
         }
     }

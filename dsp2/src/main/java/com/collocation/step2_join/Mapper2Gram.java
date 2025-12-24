@@ -12,6 +12,8 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import com.collocation.DecadeWordKey;
+
 /**
  * Step 2 Mapper (2-Gram Input)
  * Goal: Read bigrams and emit them keyed by their FIRST word.
@@ -19,49 +21,71 @@ import org.apache.hadoop.mapreduce.Mapper;
  * - Filters out bigrams containing Stop Words (loaded from Distributed Cache).
  * - Groups by Decade.
  */
-public class Mapper2Gram extends Mapper<LongWritable, Text, Text, Text> {
-
-    private Text outKey = new Text();
-    private Text outValue = new Text();
-    
+public class Mapper2Gram extends Mapper<LongWritable, Text, DecadeWordKey, Text> {    
     // Set to hold the stop words for O(1) lookup
-    private Set<String> stopWords = new HashSet<>();
+    private Set<String> stopWords;
 
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
-        // 1. Retrieve the local paths of the files distributed by Hadoop
-        URI[] cacheFiles = context.getCacheFiles();
+        stopWords = new HashSet<>();
 
-        if (cacheFiles != null && cacheFiles.length > 0) {
-            try {
-                // Hadoop symlinks the file to the working directory.
-                // We extract the filename (e.g., "eng_stop_words.txt") from the path.
-                String filename = new Path(cacheFiles[0].getPath()).getName();
+        String[] hebrewStopWords = {
+            "״", "׳", "של", "רב", "פי", "עם", "עליו", "עליהם", "על", "עד", "מן", "מכל", "מי",
+            "מהם", "מה", "מ", "למה", "לכל", "לי", "לו", "להיות", "לה", "לא", "כן", "כמה",
+            "כלי", "כל", "כי", "יש", "ימים", "יותר", "יד", "י", "זה", "ז", "ועל", "ומי",
+            "ולא", "וכן", "וכל", "והיא", "והוא", "ואם", "ו", "הרבה", "הנה", "היו", "היה",
+            "היא", "הזה", "הוא", "דבר", "ד", "ג", "בני", "בכל", "בו", "בה", "בא", "את",
+            "אשר", "אם", "אלה", "אל", "אך", "איש", "אין", "אחת", "אחר", "אחד", "אז",
+            "אותו", "־", "^", "?", ";", ":", "1", ".", "-", "*", "\"", "!", "שלשה", "בעל",
+            "פני", ")", "גדול", "שם", "עלי", "עולם", "מקום", "לעולם", "לנו", "להם", "ישראל",
+            "יודע", "זאת", "השמים", "הזאת", "הדברים", "הדבר", "הבית", "האמת", "דברי",
+            "במקום", "בהם", "אמרו", "אינם", "אחרי", "אותם", "אדם", "(", "חלק", "שני",
+            "שכל", "שאר", "ש", "ר", "פעמים", "נעשה", "ן", "ממנו", "מלא", "מזה", "ם",
+            "לפי", "ל", "כמו", "כבר", "כ", "זו", "ומה", "ולכל", "ובין", "ואין", "הן",
+            "היתה", "הא", "ה", "בל", "בין", "בזה", "ב", "אף", "אי", "אותה", "או", "אבל",
+            "א"
+        };
 
-                // 2. Read the file line by line
-                BufferedReader reader = new BufferedReader(new FileReader(filename));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    // Trim whitespace and add to the set
-                    // We use toLowerCase() to ensure case-insensitive matching for English
-                    if (!line.trim().isEmpty()) {
-                        stopWords.add(line.trim().toLowerCase());
-                    }
-                }
-                reader.close();
-                
-            } catch (Exception e) {
-                System.err.println("Error reading stop words file from cache: " + e.getMessage());
+        // 2. English Stop Words (You should add the English list here too)
+        String[] englishStopWords = {
+            "a", "about", "above", "across", "after", "afterwards", "again", "against", "all", "almost",
+            "alone", "along", "already", "also", "although", "always", "am", "among", "amongst", "amoungst",
+            "amount", "an", "and", "another", "any", "anyhow", "anyone", "anything", "anyway", "anywhere",
+            "are", "around", "as", "at", "back", "be", "became", "because", "become", "becomes", "becoming",
+            "been", "before", "beforehand", "behind", "being", "below", "beside", "besides", "between", "beyond",
+            "bill", "both", "bottom", "but", "by", "call", "can", "cannot", "cant", "co", "computer", "con",
+            "could", "couldnt", "cry", "de", "describe", "detail", "do", "done", "down", "due", "during",
+            "each", "eg", "eight", "either", "eleven", "else", "elsewhere", "empty", "enough", "etc", "even",
+            "ever", "every", "everyone", "everything", "everywhere", "except", "few", "fifteen", "fify", "fill",
+            "find", "fire", "first", "five", "for", "former", "formerly", "forty", "found", "four", "from",
+            "front", "full", "further", "get", "give", "go", "had", "has", "hasnt", "have", "he", "hence", "her",
+            "here", "hereafter", "hereby", "herein", "hereupon", "hers", "herself", "him", "himself", "his",
+            "how", "however", "hundred", "i", "ie", "if", "in", "inc", "indeed", "interest", "into", "is", "it",
+            "its", "itself", "keep", "last", "latter", "latterly", "least", "less", "ltd", "made", "many", "may",
+            "me", "meanwhile", "might", "mill", "mine", "more", "moreover", "most", "mostly", "move", "much",
+            "must", "my", "myself", "name", "namely", "neither", "never", "nevertheless", "next", "nine", "no",
+            "nobody", "none", "noone", "nor", "not", "nothing", "now", "nowhere", "of", "off", "often", "on",
+            "once", "one", "only", "onto", "or", "other", "others", "otherwise", "our", "ours", "ourselves",
+            "out", "over", "own", "part", "per", "perhaps", "please", "put", "rather", "re", "same", "see",
+            "seem", "seemed", "seeming", "seems", "serious", "several", "she", "should", "show", "side", "since",
+            "sincere", "six", "sixty", "so", "some", "somehow", "someone", "something", "sometime", "sometimes",
+            "somewhere", "still", "such", "system", "take", "ten", "than", "that", "the", "their", "them",
+            "themselves", "then", "thence", "there", "thereafter", "thereby", "therefore", "therein", "thereupon",
+            "these", "they", "thick", "thin", "third", "this", "those", "though", "three", "through", "throughout",
+            "thru", "thus", "to", "together", "too", "top", "toward", "towards", "twelve", "twenty", "two", "un",
+            "under", "until", "up", "upon", "us", "very", "via", "was", "we", "well", "were", "what", "whatever",
+            "when", "whence", "whenever", "where", "whereafter", "whereas", "whereby", "wherein", "whereupon",
+            "wherever", "whether", "which", "while", "whither", "who", "whoever", "whole", "whom", "whose", "why",
+            "will", "with", "within", "without", "would", "yet", "you", "your", "yours", "yourself", "yourselves"
+        };
+
+            // Add stop words to the HashSet
+            for (String word : hebrewStopWords) {
+                stopWords.add(word);
             }
-        } else {
-            System.err.println("Warning: No Cache Files found. Stop word filtering will be disabled.");
-        }
-    }
-
-    // Helper function to check if a word is in the set
-    private boolean isStopWord(String word) {
-        // Convert input word to lowercase to match the set
-        return stopWords.contains(word.toLowerCase());
+            for (String word : englishStopWords) {
+                stopWords.add(word);
+            }
     }
 
     @Override
@@ -86,7 +110,7 @@ public class Mapper2Gram extends Mapper<LongWritable, Text, Text, Text> {
 
         // --- FILTERING LOGIC ---
         // If either word is in our Stop Words list, we discard the whole pair.
-        if (isStopWord(w1) || isStopWord(w2)) {
+        if (stopWords.contains(w1.toLowerCase()) || stopWords.contains(w2.toLowerCase())) {
             return;
         }
 
@@ -95,11 +119,11 @@ public class Mapper2Gram extends Mapper<LongWritable, Text, Text, Text> {
             int decade = (year / 10) * 10;
 
             // Output Key: "1990 Word1" (e.g., "1990 Apple")
-            outKey.set(decade + " " + w1);
+            DecadeWordKey outKey = new DecadeWordKey(String.valueOf(decade), w1, 1);
 
             // Output Value: "2:Word2:Count" (e.g., "2:Pie:500")
             // The "2:" tag tells the Reducer this comes from the 2-Gram dataset
-            outValue.set("2:" + w2 + ":" + countStr);
+            Text outValue = new Text("c2:" + w2 + ":" + countStr);
 
             context.write(outKey, outValue);
 
