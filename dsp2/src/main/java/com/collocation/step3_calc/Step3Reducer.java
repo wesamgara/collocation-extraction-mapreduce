@@ -27,57 +27,52 @@ public class Step3Reducer extends Reducer<DecadeWordKey, Text, Text, DoubleWrita
     @Override
     public void reduce(DecadeWordKey key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
         
+        // This variable will store C2 (The count of the word we are joining on)
         long countOfW2 = 0;
         
+        // Iterate through the values. 
+        // Thanks to Secondary Sort (Tag 0 vs Tag 1), the "c1:" value (Count) should arrive FIRST.
         for (Text val : values) {
-            // 1. TRIM: Remove spaces/newlines that might cause "Garbage" errors
-            String s = val.toString().trim();
+            String s = val.toString();
             
-            // 2. UNIVERSAL SPLITTER: Split by Colon OR Tab
-            // This fixes the issue where "c1\t500" was being ignored by .split(":")
-            String[] parts = s.split("[:\t]");
-            
-            // Safety Check: Skip broken lines immediately
-            if (parts.length < 2) continue;
-
-            String tag = parts[0]; // "c1" or "c2"
-
             // ---------------------------------------------------------
-            // CASE A: The Count Value (Tag c1)
+            // CASE A: The Count Value (From Step3MapperCount)
+            // Format: "c1:<count>"  (Tag 0)
             // ---------------------------------------------------------
-            if (tag.equals("c1")) {
-                try {
-                    countOfW2 = Long.parseLong(parts[1]);
-                } catch (NumberFormatException e) {
-                    // Ignore bad number (Garbage protection)
+            if (s.startsWith("c1:")) {
+                String[] parts = s.split(":");
+                // --- SAFETY FIX: Check length before accessing index 1 ---
+                if (parts.length >= 2) {
+                    try {
+                        countOfW2 = Long.parseLong(parts[1]);
+                    } catch (NumberFormatException e) {
+                        // Ignore bad number
+                    }
                 }
             }
             
             // ---------------------------------------------------------
-            // CASE B: The Bigram Data (Tag c2)
+            // CASE B: The Bigram Data (From Step3MapperData)
+            // Format: "c2:<w1>:<c12>:<c1>"  (Tag 1)
             // ---------------------------------------------------------
-            else if (tag.equals("c2")) {
+            else if (s.startsWith("c2:")) {
                 // We can only calculate if we successfully found the countOfW2 previously
                 if (countOfW2 > 0) {
+                    String[] parts = s.split(":");
                     // Expected parts: ["c2", "w1", "c12", "c1"]
                     if (parts.length >= 4) {
                         try {
                             String w1 = parts[1];
-                            long c12 = Long.parseLong(parts[2]);
+                            long c12 = Long.parseLong(parts[2]); // This is where "Ă9" was crashing you
                             long c1 = Long.parseLong(parts[3]);
                             
-                            // We assume the key's word is w2
-                            String w2 = key.getWord().toString();
-
-                            // Calculate LLR
+                            // Calculate and Write
                             if (N > 0) {
                                 double llr = calculateLLR(c1, countOfW2, c12, N);
-                                
-                                // Write Output: "Decade w1 w2" -> Score
-                                context.write(new Text(key.getDecade() + " " + w1 + " " + w2), new DoubleWritable(llr));
+                                context.write(new Text(key.getDecade() + " " + w1 + " " + key.getWord().toString()), new DoubleWritable(llr));
                             }
                         } catch (NumberFormatException e) {
-                            // IGNORE bad numbers (Garbage protection)
+                            // IGNORE bad numbers (Shield 2)
                             // This catch block prevents the crash!
                         }
                     }
