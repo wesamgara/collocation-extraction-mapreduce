@@ -3,10 +3,13 @@ package com.collocation.step3_calc;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+
 import com.collocation.DecadeWordKey;
+import com.collocation.Sanitizer;
 
 public class Step3MapperCount extends Mapper<LongWritable, Text, DecadeWordKey, Text> {
     
@@ -82,11 +85,11 @@ public class Step3MapperCount extends Mapper<LongWritable, Text, DecadeWordKey, 
         String[] parts = line.split("\t");
         if (parts.length < 3) return;
 
-        String word = parts[0]; // This is our potential "Word2"
+        String word = Sanitizer.sanitize(parts[0]); // This is our potential "Word2"
         String countStr = parts[2];
 
         // Filter stop words just to be safe (though usually 2-grams are already filtered)
-        if (stopWords.contains(word.toLowerCase())) return; 
+        if (word == null || stopWords.contains(word)) return; 
 
         try {
             int year = Integer.parseInt(parts[1]);
@@ -94,7 +97,7 @@ public class Step3MapperCount extends Mapper<LongWritable, Text, DecadeWordKey, 
 
             // KEY: Group by Decade + Word. 
             // Tag = 0 (Count, arrives 1st)
-            DecadeWordKey outKey = new DecadeWordKey(String.valueOf(decade), word, 0);
+            DecadeWordKey outKey = new DecadeWordKey(String.valueOf(decade), word, 0, "");
             
             // VALUE: "c1:500" (This is C2, the count of the second word)
             Text outValue = new Text("c1:" + countStr);

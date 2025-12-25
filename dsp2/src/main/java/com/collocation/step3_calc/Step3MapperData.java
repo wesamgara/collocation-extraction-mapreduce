@@ -1,9 +1,11 @@
 package com.collocation.step3_calc;
 
 import java.io.IOException;
+
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+
 import com.collocation.DecadeWordKey;
 
 public class Step3MapperData extends Mapper<LongWritable, Text, DecadeWordKey, Text> {
@@ -26,7 +28,7 @@ public class Step3MapperData extends Mapper<LongWritable, Text, DecadeWordKey, T
         try {
             // NEW KEY: Group by Decade + Word2
             // Tag = 1 (Big Table, arrives 2nd)
-            DecadeWordKey outKey = new DecadeWordKey(decade, w2, 1);
+            DecadeWordKey outKey = new DecadeWordKey(decade, w2, 1, w1);
 
             // VALUE: We need to pass along everything else (Word1, C12, C1)
             // Format: "c2:Word1:C12:C1"

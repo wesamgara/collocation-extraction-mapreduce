@@ -2,7 +2,6 @@ package com.collocation;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
-import com.collocation.DecadeWordKey;
 
 public class GroupingComparator extends WritableComparator {
 

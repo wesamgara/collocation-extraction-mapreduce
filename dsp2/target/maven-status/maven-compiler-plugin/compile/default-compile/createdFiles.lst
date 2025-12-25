@@ -14,5 +14,6 @@ com\collocation\step3_calc\Step3MapperCount.class
 com\collocation\step1_count_n\Step1Mapper.class
 com\collocation\step4_sort\SortReducer.class
 com\collocation\step4_sort\SortGroupingComparator.class
+com\collocation\Sanitizer.class
 com\collocation\DecadeWordKey.class
 com\collocation\step4_sort\SortMapper.class

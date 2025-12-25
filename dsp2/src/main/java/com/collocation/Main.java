@@ -13,8 +13,10 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import com.collocation.step1_count_n.Step1Mapper;
 import com.collocation.step1_count_n.Step1Reducer;
@@ -25,12 +27,10 @@ import com.collocation.step3_calc.Step3MapperCount;
 import com.collocation.step3_calc.Step3MapperData;
 import com.collocation.step3_calc.Step3Reducer;
 import com.collocation.step4_sort.CollocationKey;
-import com.collocation.step4_sort.SortGroupingComparator;
-import com.collocation.step4_sort.SortMapper;
-import com.collocation.step4_sort.SortReducer; // Reads Step 2 Output
-import com.collocation.step4_sort.Step4Partitioner; // Reads 1-Gram File (joins on w2)
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+import com.collocation.step4_sort.SortGroupingComparator; // Reads Step 2 Output
+import com.collocation.step4_sort.SortMapper; // Reads 1-Gram File (joins on w2)
+import com.collocation.step4_sort.SortReducer;
+import com.collocation.step4_sort.Step4Partitioner;
 
 public class Main {
     public static void main(String[] args) throws Exception {

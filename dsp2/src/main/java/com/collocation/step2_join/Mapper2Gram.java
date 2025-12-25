@@ -1,18 +1,15 @@
 package com.collocation.step2_join;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
-import java.net.URI;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import com.collocation.DecadeWordKey;
+import com.collocation.Sanitizer;
 
 /**
  * Step 2 Mapper (2-Gram Input)
@@ -105,12 +102,12 @@ public class Mapper2Gram extends Mapper<LongWritable, Text, DecadeWordKey, Text>
         String[] words = bigram.split(" ");
         if (words.length != 2) return; // Skip if not a valid bigram
 
-        String w1 = words[0];
-        String w2 = words[1];
+        String w1 = Sanitizer.sanitize(words[0]);
+        String w2 = Sanitizer.sanitize(words[1]);
 
         // --- FILTERING LOGIC ---
         // If either word is in our Stop Words list, we discard the whole pair.
-        if (stopWords.contains(w1.toLowerCase()) || stopWords.contains(w2.toLowerCase())) {
+        if (w1 == null || w2 == null || stopWords.contains(w1) || stopWords.contains(w2)) {
             return;
         }
 
@@ -119,7 +116,7 @@ public class Mapper2Gram extends Mapper<LongWritable, Text, DecadeWordKey, Text>
             int decade = (year / 10) * 10;
 
             // Output Key: "1990 Word1" (e.g., "1990 Apple")
-            DecadeWordKey outKey = new DecadeWordKey(String.valueOf(decade), w1, 1);
+            DecadeWordKey outKey = new DecadeWordKey(String.valueOf(decade), w1, 1, "");
 
             // Output Value: "2:Word2:Count" (e.g., "2:Pie:500")
             // The "2:" tag tells the Reducer this comes from the 2-Gram dataset

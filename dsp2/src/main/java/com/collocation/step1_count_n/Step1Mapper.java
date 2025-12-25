@@ -7,6 +7,7 @@ import java.util.Set;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import com.collocation.Sanitizer;
 
 public class Step1Mapper extends Mapper<LongWritable, Text, Text, LongWritable> {
 
@@ -81,8 +82,8 @@ public class Step1Mapper extends Mapper<LongWritable, Text, Text, LongWritable> 
 
         // Line format: word <tab> year <tab> occurrences <tab> volumes
         String[] parts = value.toString().split("\t");
-        
-        if (parts.length < 3 || stopWords.contains(parts[0].toLowerCase())) return; // Skip bad lines 
+        String cleanWord = Sanitizer.sanitize(parts[0]);
+        if (cleanWord == null || parts.length < 3 || stopWords.contains(cleanWord)) return; // Skip bad lines 
 
         try {
             int year = Integer.parseInt(parts[1]);

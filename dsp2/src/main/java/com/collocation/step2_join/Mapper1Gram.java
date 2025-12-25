@@ -9,6 +9,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import com.collocation.DecadeWordKey;
+import com.collocation.Sanitizer;
 
 /**
  * Step 2 Mapper (1-Gram Input)
@@ -90,12 +91,11 @@ public class Mapper1Gram extends Mapper<LongWritable, Text, DecadeWordKey, Text>
         String[] parts = line.split("\t");
 
         if (parts.length < 3) return;
-
-        String word = parts[0];
+        String word = Sanitizer.sanitize(parts[0]);
         String yearStr = parts[1];
         String countStr = parts[2];
 
-        if (stopWords.contains(word.toLowerCase())) {
+        if (word == null || stopWords.contains(word.toLowerCase())) {
             return;
         }
 
@@ -106,7 +106,7 @@ public class Mapper1Gram extends Mapper<LongWritable, Text, DecadeWordKey, Text>
             // Key: "1990 Apple"
             // We join Decade and Word so counts are grouped by decade
             
-            DecadeWordKey outKey = new DecadeWordKey(String.valueOf(decade), word, 0); 
+            DecadeWordKey outKey = new DecadeWordKey(String.valueOf(decade), word, 0, ""); 
             Text outValue = new Text("c1:" + countStr);
 
             context.write(outKey, outValue);

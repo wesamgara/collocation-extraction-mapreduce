@@ -20,53 +20,50 @@ public class JoinReducer extends Reducer<DecadeWordKey, Text, Text, Text> {
     public void reduce(DecadeWordKey key, Iterable<Text> values, Context context) 
             throws IOException, InterruptedException {
         
-        long countW1 = -1;
-        boolean first = true;
+        long totalC1 = 0;      // Sum of ALL unigram counts for "Apple" in this decade
+        String currentW2 = null;
+        long sumC12 = 0;       // Sum of "Apple Pie" counts
 
         for (Text value : values) {
-            String val = value.toString();
+            String s = value.toString();
 
-            if (first) {
-                // --- FIRST ITEM (Expected Tag 0: c1) ---
-                // We assume Secondary Sort put "c1:..." first.
-                if (val.startsWith("c1:")) {
-                    String[] parts = val.split(":");
-                    
-                    // --- SAFETY FIX: CHECK LENGTH BEFORE ACCESSING INDEX 1 ---
-                    if (parts.length >= 2) {
-                        try {
-                            countW1 = Long.parseLong(parts[1]);
-                        } catch (NumberFormatException e) {
-                            // If number is corrupt, we keep countW1 = -1
-                        }
-                    }
-                }
-                // Mark first as done so we process the rest as c2
-                first = false;
-            } 
-            else {
-                // --- REMAINING ITEMS (Expected Tag 1: c2) ---
-                
-                // If we failed to find a valid c1 count in the first step, 
-                // we cannot calculate LLR for any of these bigrams. Skip them.
-                if (countW1 == -1) return;
+            // --- TAG 0: Unigram Counts (c1) ---
+            if (s.startsWith("c1:")) {
+                // Just keep summing them up! 
+                // (e.g., 50 from 1990 + 60 from 1991 = 110)
+                try { 
+                    totalC1 += Long.parseLong(s.split(":")[1]);
+                } catch(Exception e){
 
-                if (val.startsWith("c2:")) {
-                    String[] parts = val.split(":");
-                    
-                    // Safety Check: Ensure we have "c2", "Word2", and "CountPair"
-                    if (parts.length >= 3) {
-                        String word2 = parts[1];
-                        String countPair = parts[2];
-                        
-                        // Output: Decade -> Word1 Word2 CountPair CountW1
-                        // We write the key as the Decade, and the value contains the rest.
-                        // (The next Mapper will likely re-key this to Word2 to join c2).
-                        context.write(new Text(key.getDecade()), 
-                            new Text(key.getWord() + "\t" + word2 + "\t" + countPair + "\t" + countW1));
-                    }
                 }
             }
+            // --- TAG 1: Bigram Counts (c2) ---
+            else if (s.startsWith("c2:")) {
+                // Format: c2:Pie:10
+                String[] parts = s.split(":");
+                String w2 = parts[1];
+                long count = Long.parseLong(parts[2]);
+
+                // Check if we switched to a new w2 (e.g., from "Pie" to "Juice")
+                if (currentW2 != null && !w2.equals(currentW2)) {
+                    // Emit the SUMMED result for the previous bigram
+                    if (totalC1 > 0) {
+                        // Output: "1990" -> "Apple Pie SumC12 TotalC1"
+                        context.write(new Text(key.getDecade()), 
+                            new Text(key.getWord() + "\t" + currentW2 + "\t" + sumC12 + "\t" + totalC1));
+                    }
+                    sumC12 = 0; // Reset for next word
+                }
+
+                currentW2 = w2;
+                sumC12 += count;
+            }
+        }
+        
+        // Don't forget the last one!
+        if (currentW2 != null && totalC1 > 0) {
+            context.write(new Text(key.getDecade()), 
+                 new Text(key.getWord() + "\t" + currentW2 + "\t" + sumC12 + "\t" + totalC1));
         }
     }
 }
