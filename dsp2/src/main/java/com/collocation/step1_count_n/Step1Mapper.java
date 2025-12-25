@@ -95,7 +95,7 @@ public class Step1Mapper extends Mapper<LongWritable, Text, Text, LongWritable> 
             
             context.write(decadeKey, countValue);
         } catch (NumberFormatException e) {
-            // Ignore bad numbers
+            System.err.println("WARNING: bad input : " + value.toString());
         }
     }
 }

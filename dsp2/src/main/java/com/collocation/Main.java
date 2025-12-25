@@ -1,6 +1,8 @@
 package com.collocation;
 
-import java.net.URI;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -14,32 +16,21 @@ import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-// --- SHARED CLASSES (Key, Partitioner, Comparator) ---
-// Make sure your files are actually in these packages!
-import com.collocation.DecadeWordKey; 
-import com.collocation.DecadePartitioner;
-import com.collocation.GroupingComparator;
-
-// --- STEP 1 IMPORTS ---
 import com.collocation.step1_count_n.Step1Mapper;
 import com.collocation.step1_count_n.Step1Reducer;
-
-// --- STEP 2 IMPORTS ---
+import com.collocation.step2_join.JoinReducer;
 import com.collocation.step2_join.Mapper1Gram;
 import com.collocation.step2_join.Mapper2Gram;
-import com.collocation.step2_join.JoinReducer;
-
-// --- STEP 3 IMPORTS ---
-// You need specific mappers for Step 3 because the logic joins on Word2
-import com.collocation.step3_calc.Step3MapperData; // Reads Step 2 Output
-import com.collocation.step3_calc.Step3MapperCount; // Reads 1-Gram File (joins on w2)
-import com.collocation.step3_calc.Step3Reducer;     // Calculates PMI/LLR
-
-// --- STEP 4 IMPORTS ---
+import com.collocation.step3_calc.Step3MapperCount;
+import com.collocation.step3_calc.Step3MapperData;
+import com.collocation.step3_calc.Step3Reducer;
 import com.collocation.step4_sort.CollocationKey;
+import com.collocation.step4_sort.SortGroupingComparator;
 import com.collocation.step4_sort.SortMapper;
-import com.collocation.step4_sort.SortReducer;
-import com.collocation.step4_sort.Step4Partitioner;
+import com.collocation.step4_sort.SortReducer; // Reads Step 2 Output
+import com.collocation.step4_sort.Step4Partitioner; // Reads 1-Gram File (joins on w2)
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -74,9 +65,10 @@ public class Main {
 
         job1.setOutputKeyClass(Text.class);
         job1.setOutputValueClass(LongWritable.class);
-        job1.setInputFormatClass(TextInputFormat.class);
-        
-        FileInputFormat.addInputPath(job1, new Path(input2Gram)); 
+        job1.setInputFormatClass(SequenceFileInputFormat.class);
+        job1.setOutputFormatClass(TextOutputFormat.class);
+
+        FileInputFormat.addInputPath(job1, new Path(input1Gram));
         FileOutputFormat.setOutputPath(job1, new Path(basePath + "/step1_output"));
 
         if (!job1.waitForCompletion(true)) System.exit(1);
@@ -101,12 +93,13 @@ public class Main {
         job2.setReducerClass(JoinReducer.class);
         job2.setOutputKeyClass(Text.class);
         job2.setOutputValueClass(Text.class);
-        
-        MultipleInputs.addInputPath(job2, new Path(input1Gram), 
-                                    TextInputFormat.class, Mapper1Gram.class);
-        MultipleInputs.addInputPath(job2, new Path(input2Gram), 
-                                    TextInputFormat.class, Mapper2Gram.class);
+        job2.setOutputFormatClass(TextOutputFormat.class);
 
+        MultipleInputs.addInputPath(job2, new Path(input1Gram), 
+                                    SequenceFileInputFormat.class, Mapper1Gram.class);
+        MultipleInputs.addInputPath(job2, new Path(input2Gram), 
+                                    SequenceFileInputFormat.class, Mapper2Gram.class);
+        
         FileOutputFormat.setOutputPath(job2, new Path(basePath + "/step2_output"));
 
         if (!job2.waitForCompletion(true)) System.exit(1);
@@ -116,47 +109,41 @@ public class Main {
         // ==================================================================
         System.out.println("--- Starting Job 3: Calculate LLR ---");
 
-        long N_Value = 0;
+        StringBuilder nMapString = new StringBuilder();
+
         Path step1OutputDir = new Path(basePath + "/step1_output");
 
         // 1. Get the correct S3 FileSystem
         FileSystem fs = step1OutputDir.getFileSystem(conf);
 
-        // 2. Check if folder exists
         if (fs.exists(step1OutputDir)) {
-            // 3. List ALL files in the directory (part-r-00000, part-r-00001, etc.)
             FileStatus[] statusList = fs.listStatus(step1OutputDir);
-
             for (FileStatus status : statusList) {
-                // Only read files that start with "part-r-" (ignore _SUCCESS)
                 if (!status.getPath().getName().startsWith("part-r-")) continue;
-
-                java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(fs.open(status.getPath())));
-                String line = br.readLine();
                 
-                // If we found a line, parse it
-                if (line != null) {
+                BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(status.getPath()), java.nio.charset.StandardCharsets.UTF_8));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    // Expected format: "1990 <tab> 500000"
                     String[] parts = line.split("\t");
-                    long value = Long.parseLong(parts[parts.length - 1]);
-                    
-                    // If Step 1 is just calculating a global sum, we might need to add them up
-                    // Or if there is only 1 line total across all files, just take it.
-                    N_Value += value; 
+                    if (parts.length >= 2) {
+                        // Verify part[1] is actually a number before adding it
+                        // This protects you if you accidentally point to the wrong file (e.g. "1990 apple")
+                        try {
+                            Long.parseLong(parts[1]); 
+                            nMapString.append(parts[0]).append(":").append(parts[1]).append(",");
+                        } catch (NumberFormatException e) {
+                            System.err.println("WARNING: Skipping invalid line in N-file: " + line);
+                        }
+                    }
                 }
                 br.close();
             }
-        } else {
-            System.err.println("ERROR: Step 1 output directory not found!");
         }
 
-        if (N_Value <= 0) {
-            System.err.println("Error: N_Value is invalid (" + N_Value + "). Exiting.");
-            System.exit(1);
-        }
-
-        // Pass N to the configuration so Step3Reducer can find it
-        Configuration conf3 = new Configuration(conf); // Copy settings (like language)
-        conf3.setLong("N_Value", N_Value);
+        // Pass this string to the Configuration
+        Configuration conf3 = new Configuration(conf);
+        conf3.set("DECADE_COUNTS", nMapString.toString()); // <--- PASS THE MAP, NOT A LONG
 
         Job job3 = Job.getInstance(conf3, "Step 3: Calc LLR");
         job3.setJarByClass(Main.class);
@@ -173,7 +160,8 @@ public class Main {
         
         // 2. CRITICAL FIX: Step 3 Reducer outputs DoubleWritable, not Text!
         job3.setOutputKeyClass(Text.class);
-        job3.setOutputValueClass(DoubleWritable.class); 
+        job3.setOutputValueClass(DoubleWritable.class);
+        job3.setOutputFormatClass(TextOutputFormat.class);
 
         // Input A: Output of Step 2 (The Big Data)
         MultipleInputs.addInputPath(job3, new Path(basePath + "/step2_output"), 
@@ -181,7 +169,7 @@ public class Main {
 
         // Input B: Original 1-gram file (The Counts)
         MultipleInputs.addInputPath(job3, new Path(input1Gram), 
-                                    TextInputFormat.class, Step3MapperCount.class);
+                                    SequenceFileInputFormat.class, Step3MapperCount.class);
 
         FileOutputFormat.setOutputPath(job3, new Path(basePath + "/step3_output"));
 
@@ -202,9 +190,11 @@ public class Main {
         job4.setMapOutputKeyClass(CollocationKey.class);
         job4.setMapOutputValueClass(Text.class);
         job4.setPartitionerClass(Step4Partitioner.class); // Reuse if applicable, or Step4 specific
-        
+        job4.setGroupingComparatorClass(SortGroupingComparator.class);
         job4.setOutputKeyClass(Text.class);
         job4.setOutputValueClass(Text.class);
+        job4.setInputFormatClass(TextInputFormat.class);
+        job4.setOutputFormatClass(TextOutputFormat.class);
 
         FileInputFormat.addInputPath(job4, new Path(basePath + "/step3_output"));
         FileOutputFormat.setOutputPath(job4, new Path(basePath + "/final_output"));

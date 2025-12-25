@@ -1,6 +1,8 @@
 package com.collocation.step3_calc;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
@@ -10,17 +12,31 @@ import com.collocation.DecadeWordKey; // Import DoubleWritable for the score
 
 public class Step3Reducer extends Reducer<DecadeWordKey, Text, Text, DoubleWritable> {
     
-    // Total words N (retrieved from configuration)
-    private long N; 
+    //words N (retrieved from configuration)
+    private Map<String, Long> n_Map;
 
     @Override
     protected void setup(Context context) {
-        // defaults to -1 so we know if it is missing
-        N = context.getConfiguration().getLong("N_Value", -1);
+        n_Map = new HashMap<>();
+        // Retrieves the long string "1990:5000,2000:6000..."
+        String step1OutPut = context.getConfiguration().get("DECADE_COUNTS", ""); // Use DECADE_COUNTS to match Main
 
-        if (N == -1) {
-            // Stop the job immediately with a clear error
-            throw new RuntimeException("CRITICAL ERROR: N_Value was not set in Configuration!");
+        if (step1OutPut.isEmpty()) {
+             // If empty, we can't do anything. 
+             // Ideally throw error, but for safety we just init empty map.
+             return; 
+        }
+
+        // Parse the string back into the Map
+        for (String entry : step1OutPut.split(",")) {
+            String[] parts = entry.split(":");
+            if (parts.length == 2) {
+                try {
+                    n_Map.put(parts[0], Long.parseLong(parts[1]));
+                } catch (NumberFormatException e) {
+                    // Ignore bad entries
+                }
+            }
         }
     }
 
@@ -29,8 +45,13 @@ public class Step3Reducer extends Reducer<DecadeWordKey, Text, Text, DoubleWrita
         
         // This variable will store C2 (The count of the word we are joining on)
         long countOfW2 = 0;
-        
-        // Iterate through the values. 
+        String currentDecade = key.getDecade().toString();
+        if (!n_Map.containsKey(currentDecade)) {
+            // If we don't know N for 1990, we can't calculate LLR. Skip.
+            return;
+        }
+        long n = n_Map.get(currentDecade);
+
         // Thanks to Secondary Sort (Tag 0 vs Tag 1), the "c1:" value (Count) should arrive FIRST.
         for (Text val : values) {
             String s = val.toString();
@@ -67,8 +88,8 @@ public class Step3Reducer extends Reducer<DecadeWordKey, Text, Text, DoubleWrita
                             long c1 = Long.parseLong(parts[3]);
                             
                             // Calculate and Write
-                            if (N > 0) {
-                                double llr = calculateLLR(c1, countOfW2, c12, N);
+                            if (n > 0) {
+                                double llr = calculateLLR(c1, countOfW2, c12, n);
                                 context.write(new Text(key.getDecade() + " " + w1 + " " + key.getWord().toString()), new DoubleWritable(llr));
                             }
                         } catch (NumberFormatException e) {
