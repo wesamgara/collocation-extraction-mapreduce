@@ -127,22 +127,35 @@ public class Step3Reducer extends Reducer<DecadeWordKey, Text, Text, DoubleWrita
     }
 
     private double calculateLLR(long c1, long c2, long c12, long N) {
-        double k11 = c12;
-        double k12 = c2 - c12;
-        double k21 = c1 - c12;
-        double k22 = N - (c1 + c2 - c12);
-
-        if (k11 < 0 || k12 < 0 || k21 < 0 || k22 < 0) return 0;
-
-        return 2 * (
-            entry(k11) + entry(k12) + entry(k21) + entry(k22)
-            - entry(k11 + k12) - entry(k11 + k21) - entry(k12 + k22) - entry(k21 + k22)
-            + entry(N)
-        );
+        // Validation
+        if (c1 <= 0 || c2 <= 0 || c12 <= 0 || N <= 0) return 0;
+        if (c12 > c1 || c12 > c2) return 0;
+        if (c1 >= N || c2 >= N) return 0;
+        
+        double p  = (double) c2 / N;
+        double p1 = (double) c12 / c1;
+        double p2 = (double) (c2 - c12) / (N - c1);
+        
+        if (p <= 0 || p >= 1 || p1 <= 0 || p1 >= 1 || p2 <= 0 || p2 >= 1) {
+            return 0;
+        }
+        
+        double term1 = logL(c12, c1, p);
+        double term2 = logL(c2 - c12, N - c1, p);
+        double term3 = logL(c12, c1, p1);
+        double term4 = logL(c2 - c12, N - c1, p2);
+        
+        return -2 * (term1 + term2 - term3 - term4);
     }
 
-    private double entry(double k) {
-        if (k <= 0) return 0;
-        return k * Math.log(k);
+    private double logL(long k, long n, double x) {
+        double result = 0;
+        if (k > 0 && x > 0) {
+            result += k * Math.log(x);
+        }
+        if (n > k && x < 1) {
+            result += (n - k) * Math.log(1 - x);
+        }
+        return result;
     }
 }
