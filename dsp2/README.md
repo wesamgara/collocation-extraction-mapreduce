@@ -205,11 +205,11 @@ Local aggregation (Combiner) reduced network traffic by **99.9986%** in Step 1, 
 
 | # | Decade | Collocation | LLR | Why It's Bad |
 |---|--------|-------------|-----|--------------|
-| 1 | 1980 | ואחר כך | 157,691 | **Grammatical Connector**: "and after that" - function phrase, not semantic unit |
-| 2 | 1980 | כדי שלא | 81,855 | **Prepositional Phrase**: "in order not to" - grammatical structure |
-| 3 | 1950 | אלא גם | 72,162 | **Coordinating Structure**: "but also" - part of "not only...but also" |
-| 4 | 1980 | מובן מאליו | 79,333 | **Adverbial Phrase**: "self-evident" - descriptive phrase, not entity |
-| 5 | 1950 | אנו מוצאים | 111,628 | **Verb Phrase**: "we find" - subject+verb, not a collocation |
+| 1 | 1890 | נוםעי הצלב | 17,820 | **OCR Error**: Should be "נוסעי הצלב" (The Crusaders). The letter 'ס' was misread as 'ם'. |
+| 2 | 1620 | ואהר כך | 249 | **OCR Error**: Should be "ואחר כך" (And afterwards). The letter 'ח' was misread as 'ה'. |
+| 3 | 1620 | כרי שלא | 159 | **OCR Error**: Should be "כדי שלא" (In order not to). The letter 'ד' was misread as 'ר'. |
+| 4 | 1620 | שלא יהא | 233 | **Grammatical Fragment**: "That there shall not be" - Halachic function phrase, not a distinct entity. |
+| 5 | 1680 | ראה נא | 90 | **Discourse Marker**: "See please" - Directs reader's attention, not a meaningful concept. |
 
 ---
 
