@@ -3,15 +3,6 @@
 
 ---
 
-## STUDENT INFORMATION
-
-| Name |
-|------|
-| naser assi |
-| Wesam gara |
-
----
-
 ## 1. PROJECT OVERVIEW
 
 ### Goal
